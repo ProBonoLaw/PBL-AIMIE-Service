@@ -2,11 +2,11 @@
 
 Assessment date: November 5, 2026.
 
-The original repository was **not ready for public transfer**. Local changes now
-prepare its source for a new public repository under ProBonoLaw with a fresh initial
-commit. The original repository and its history must remain private. Nothing in
-this preparation transfers a repository, changes visibility, configures GitHub
-variables, pushes commits, or deploys Azure resources.
+The original repository was **not ready for public transfer**. The release uses
+[ProBonoLaw/PBL-AIMIE-Service](https://github.com/ProBonoLaw/PBL-AIMIE-Service) with
+a fresh initial commit. The original repository and its history remain private.
+Deployment workflows and environment configuration are managed in the private
+repository; public application changes are integrated downstream.
 
 ## Findings and changes
 
@@ -45,8 +45,11 @@ detected.
 - The publication identifier check passed. The exported source tree contained
   281 files, no Git history or ignored local settings, and zero Gitleaks findings.
   Rerun these checks on the exact candidate used for publication after any edits.
-- Docker is unavailable in this workspace, so the image build and container
-  recovery smoke test still need to pass in CI. No live Azure deployment was tested.
+- Container builds and the Azurite recovery smoke test run in GitHub Actions.
+  Publication requires successful Python, manifest, image and publication checks
+  for the release revision.
+- LangGraph was updated to 1.2.14 to address GHSA-3fx2-cqw9-xr3c; all 373 Python
+  tests passed with the patched dependency.
 
 This review covered candidate source files, locally available Git refs, and basic
 GitHub repository/security/environment metadata. It did not audit the contents of
@@ -87,8 +90,8 @@ from this privacy preparation.
 
 The read-only GitHub audit reported the original repository as **internal**, with
 secret scanning and push protection disabled and no protection rules on its Test
-or Production deployment environments. These settings have not been changed by
-the local preparation.
+or Production deployment environments. Release setup configures the new public repository protections and private
+deployment environment policies separately from the source cleanup.
 
 ## Public-to-private synchronization
 
@@ -98,14 +101,20 @@ PR. This achieves the requested public-to-private direction while keeping privat
 destination names, credentials, deployment logs and configuration off public
 Actions runners.
 
-Store the public source as a private GitHub variable such as
-`PUBLIC_UPSTREAM_REPOSITORY=probonolaw/<chosen-repository-name>`. A private workflow
-can poll it on a schedule or run manually. For prompt propagation, configure a
-GitHub App on the private side to receive public push events. It needs only the
-repository permissions required to create the private branch and PR; use a
-secret for its credential. A PR created with the default `GITHUB_TOKEN` normally
-does not trigger other Actions workflows; use an appropriately scoped GitHub App
-token when the integration PR must run CI automatically.
+The private repository runs synchronization every 15 minutes, with a manual
+trigger also available. GitHub may delay scheduled runs. Its repository variable
+`PUBLIC_UPSTREAM_REPOSITORY` identifies this public repository. The built-in
+`GITHUB_TOKEN` creates or updates an integration PR and explicitly dispatches
+Python, container and publication checks. The PR merges after required checks
+pass, then dispatches private main CI to retain automatic Test deployment.
+Production deployment remains manual.
+
+All `.github/workflows` files remain owned by private `main`. Synchronization
+preserves those files, including when public workflows change or are deleted;
+public workflow changes are listed for private maintainer review. This preserves
+the private deployment setup and avoids requiring a token that can modify
+workflows. Application conflicts stop integration for review. No private
+credentials or destination identifiers are configured in the public repository.
 
 The public and private repositories initially have unrelated histories. After
 committing the sanitized source privately, perform a one-time **private** merge
@@ -117,6 +126,5 @@ destined for upstream need a separately reviewed, sanitized public patch.
 
 Keep deployment automation downstream of the private merge. Build new
 commit-tagged images there; image promotion verifies that the selected image's
-commit belongs to private `main`. Synchronization, new repository creation and
-GitHub configuration remain release setup tasks; no synchronization has been
-activated by these local changes.
+commit belongs to private `main`. Synchronization and deployment controls are configured exclusively in the
+private repository. Keep public and private workflow maintenance separate.
