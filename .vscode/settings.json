@@ -1,0 +1,32 @@
+{
+    "azureFunctions.deploySubpath": ".",
+    "azureFunctions.scmDoBuildDuringDeployment": true,
+    "azureFunctions.pythonVenv": ".venv",
+    "azureFunctions.projectLanguage": "Python",
+    "azureFunctions.projectRuntime": "~4",
+    "azureFunctions.stopFuncTaskPostDebug": true,
+    "azureFunctions.hostStartTimeout": 600,
+    "debug.internalConsoleOptions": "neverOpen",
+    "azureFunctions.projectLanguageModel": 2,
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "cSpell.words": [
+        "aimie",
+        "aoai",
+        "azuresearch",
+        "checkpointer",
+        "Eachern",
+        "Kahan",
+        "langgraph",
+        "LCEL",
+        "marko",
+        "reranker",
+        "textanalytics",
+        "vectorstores"
+    ],
+    "git.alwaysSignOff": true,
+    "git.enableCommitSigning": true
+}

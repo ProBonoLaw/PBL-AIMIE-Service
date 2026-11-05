@@ -1,0 +1,14 @@
+interface:
+  display_name: Timeline Materiality Review
+  short_description: Select material events for legal timelines
+  default_prompt: Use $timeline-materiality-review to decide which reconciled atomic
+    events belong in a major-events legal timeline.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

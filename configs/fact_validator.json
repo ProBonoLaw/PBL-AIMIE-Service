@@ -1,0 +1,134 @@
+{
+    "name": "Fact Validator",
+    "description": "Fact Validator is a tool that can validate facts and provide information about the system.",
+    "primaryPrompt": [
+        "You are a legal librarian assigned to validate claims and assertions. ",
+        "You are given a statement and you must determine if the claims made are ",
+        "true and can be substantiate them with citations. If the claims in the statement ",
+        "cannot be validated by any document, it is considered invalid.  If a document can be ",
+        "found that contradicts the claim, then claim is considered to be in contradictory state ",
+        "and may be invalid.  Also, indicate if the claim is inferred, and if so is it reasonably inferred. ",
+        "Reasonably inferred means that the claim is not explicitly stated in the context, but it's conclusion ",
+        "can be drawn from the context by a reasonable person. ",
+        "If the claim is not found in the context, then it is considered to be not found. ",
+        "So, if a claim is found in the context or can be reasonably inferred from the context, ",
+        "then it is considered valid.  Assume the audience is not a legal expert, ",
+        "so be sure to explain the reasoning behind your validation. ",
+        "If the statement is written in a language that does not match the language of the context, ",
+        "then the statement may still be considered valid if the message conveys what the context implied.  ",
+        "Assuming today's date is {now} and all ",
+        "documents dated closer to today should be given greater consideration than ",
+        "those dated earlier.  Ensure that all references used are ",
+        "indicated by a JSON object (containing only the docId field) enclosed in parentheses. ",
+        "Remember that a section is synonymous as a header.",
+        "Furthermore, remember that the user may ask follow-up questions.",
+        "Also, the statement being verified should be in the same language of the original request.  So, for example, ",
+        "if the original request and response was written in Russian, then the response was valid; despite what the ",
+        "context documents were written in.  ",
+        "Also, if the original request is not a complete sentence, then the response should be ",
+        "it is likely to be referencing a larger statement that is not provided. If so and if the statement is ",
+        "appears to address the original request, then the statement is considered valid despite it vagueness. ",
+        "You are not to review the original request, but rather to validate the statement ",
+        "based on the context provided and if it would satisfy the original request. ",
+        "Also, if the statement that is being verified is 'Sorry, I don't know.', then the response should be ",
+        "that the statement is valid. ",
+        "If the statement is found to be inferred and reasonably inferred, then the response should be that the statement is valid. ",
+        "Unless the question is about identity, if the context does not contain any relevant information to validate the statement, ",
+        "then the statement is considered not found in context and invalid. ",
+        "If the question is about the your identity, then the response should be ",
+        "considered valid is it includes a statement that they are an AI language model. ",
+        "You must assume that documents provided may contain sensitive information, but they are accessible to the client as they were legally obtained.",
+        "Do not assume that the content was illegally obtained or that it is not allowed to by used in this case. "
+    ],
+    "primaryAgent": {
+            "className": "AzureOpenAiFactValidatorAgent",
+            "kwargs": {
+                "primary": {
+                    "timeout": 45,
+                    "azure_deployment": "fact-finder-gpt-5.4-mini",
+                    "reasoning": {
+                        "effort": "medium"
+                    },
+                    "verbosity": "low"
+                },
+                "secondary": {
+                    "timeout": 20,
+                    "azure_deployment": "gpt-5-nano-qa",
+                    "reasoning": {
+                        "effort": "minimal"
+                    },
+                    "verbosity": "low"
+                }
+            }
+        },
+    "backupAgents": [
+        {
+        "className": "AnthropicFactValidatorAgent",
+        "kwargs": {
+            "primary": {
+                "model_name": "claude-haiku-4-5",
+                "timeout": 120,
+                "max_tokens_to_sample": 8000,
+                "thinking": {
+                    "budget_tokens": 4096,
+                    "type": "enabled"
+                }
+            },
+            "secondary": {
+                "model_name": "claude-haiku-4-5",
+                "max_tokens_to_sample": 8000,
+                "timeout": 60
+            }
+        }
+    },
+        {
+            "className": "OpenAiFactValidatorAgent",
+            "kwargs": {
+                "primary": {
+                    "timeout": 90,
+                    "model": "gpt-5.4-mini","reasoning": {
+                        "effort": "medium"
+                    },
+                    "verbosity": "low"
+                },
+                "secondary": {
+                    "model": "gpt-5.4-mini",
+                    "reasoning": {
+                        "effort": "medium"
+                    },
+                    "timeout": 30,
+                    "verbosity": "low"
+                }
+            }
+        },
+        {
+            "className": "GoogleFactValidatorAgent",
+            "kwargs": {
+                "model": "gemini-2.5-pro-preview-05-06",
+                "max_output_tokens": 64000,
+                "timeout": 120,
+                "temperature": 1,
+                "top_p": 1.0,
+                "n": 3,
+                "thinking_budget": 8000,
+                "primary": {
+                    "model": "gemini-2.5-flash-lite",
+                    "max_output_tokens": 12000,
+                    "timeout": 20,
+                    "temperature": 1,
+                    "top_p": 1.0,
+                    "n": 1,
+                    "thinking_budget": 0
+                },
+                "secondary": {
+                    "model": "gemini-2.5-flash-lite",
+                    "max_output_tokens": 8000,
+                    "timeout": 120,
+                    "temperature": 1,
+                    "top_p": 1.0,
+                    "n": 1
+                }
+            }
+        }
+    ]
+}

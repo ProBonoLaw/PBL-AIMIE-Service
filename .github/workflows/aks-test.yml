@@ -1,0 +1,127 @@
+name: Build and validate AKS image
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pytest -q
+      - name: Validate deployment scripts and render manifests
+        env:
+          DRY_RUN: '1'
+          RENDER_OUTPUT: /tmp/aimie-service.yaml
+          AZURE_TENANT_ID: 00000000-0000-0000-0000-000000000000
+          AZURE_WORKLOAD_IDENTITY_CLIENT_ID: 00000000-0000-0000-0000-000000000000
+          IMAGE_TAG: sha-0000000000000000000000000000000000000000
+          AZURE_SUBSCRIPTION_ID: 22222222-2222-2222-2222-222222222222
+          TEST_AZURE_SUBSCRIPTION_ID: 11111111-1111-1111-1111-111111111111
+          PROD_AZURE_SUBSCRIPTION_ID: 22222222-2222-2222-2222-222222222222
+          TEST_STORAGE_ACCOUNT: examplestorage
+          PROD_STORAGE_ACCOUNT: exampleprodstorage
+          TEST_ACR_LOGIN_SERVER: exampletest.azurecr.io
+          TEST_KEYVAULT_NAME: exampletestvault
+          TEST_TLS_CERT_NAME: example-test-server
+          TEST_INGRESS_HOST: service.test.example.invalid
+          PROD_ACR_LOGIN_SERVER: exampleprod.azurecr.io
+          PROD_KEYVAULT_NAME: exampleprodvault
+          PROD_TLS_CERT_NAME: aimie-service-production-server
+          PROD_INGRESS_HOST: service.prod.example.invalid
+          PROD_AKS_RESOURCE_GROUP: production-example-rg
+          PROD_AKS_CLUSTER_NAME: production-example-aks
+        run: |
+          for script in scripts/*.sh; do bash -n "$script"; done
+          python3 scripts/publish-agent-configs.py --dry-run
+          python3 scripts/publish-agent-configs.py --environment production --dry-run
+          bash scripts/deploy-aks-test.sh
+          RENDER_OUTPUT=/tmp/aimie-service-production.yaml bash scripts/deploy-aks-production.sh
+          python -m pip install 'PyYAML==6.0.3'
+          python scripts/validate-aks-manifests.py /tmp/aimie-service.yaml
+          python scripts/validate-aks-manifests.py /tmp/aimie-service-production.yaml production
+
+  image:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v4
+      - name: Build AKS image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: aimie-service:sha-${{ github.sha }}
+      - name: Check Functions startup, Durable URLs and recovery with Azurite
+        env:
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: bash scripts/smoke-test-container.sh
+      - name: Save tested image
+        if: github.event.repository.private == true && vars.ENABLE_PRIVATE_DEPLOYMENTS == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: docker save aimie-service:sha-${{ github.sha }} | gzip > /tmp/aimie-service-image.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: github.event.repository.private == true && vars.ENABLE_PRIVATE_DEPLOYMENTS == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          name: aimie-service-image
+          path: /tmp/aimie-service-image.tar.gz
+          retention-days: 1
+
+  publish:
+    if: github.event.repository.private == true && vars.ENABLE_PRIVATE_DEPLOYMENTS == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: image
+    runs-on: ubuntu-latest
+    environment: aks-test
+    env:
+      TEST_ACR_NAME: ${{ vars.TEST_ACR_NAME }}
+      TEST_ACR_LOGIN_SERVER: ${{ vars.TEST_ACR_LOGIN_SERVER }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: aimie-service-image
+          path: /tmp
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Validate registry configuration and log in
+        run: |
+          set -euo pipefail
+          : "${TEST_ACR_NAME:?Set TEST_ACR_NAME}"
+          : "${TEST_ACR_LOGIN_SERVER:?Set TEST_ACR_LOGIN_SERVER}"
+          actual_server=$(az acr show --name "$TEST_ACR_NAME" --query loginServer -o tsv)
+          [[ "$actual_server" == "$TEST_ACR_LOGIN_SERVER" ]] || { echo 'Test registry mismatch' >&2; exit 1; }
+          az acr login --name "$TEST_ACR_NAME"
+      - name: Publish the tested image
+        run: |
+          docker load --input /tmp/aimie-service-image.tar.gz
+          docker tag aimie-service:sha-${{ github.sha }} "$TEST_ACR_LOGIN_SERVER/aimie-service:sha-${{ github.sha }}"
+          docker push "$TEST_ACR_LOGIN_SERVER/aimie-service:sha-${{ github.sha }}"
+          docker tag aimie-service:sha-${{ github.sha }} "$TEST_ACR_LOGIN_SERVER/aimie-service:latest"
+          docker push "$TEST_ACR_LOGIN_SERVER/aimie-service:latest"
+
+  deploy:
+    if: github.event.repository.private == true && vars.ENABLE_PRIVATE_DEPLOYMENTS == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: publish
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-aks-test.yml
+    with:
+      image_tag: sha-${{ github.sha }}

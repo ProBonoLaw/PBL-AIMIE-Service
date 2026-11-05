@@ -1,0 +1,69 @@
+{
+    "name": "Initial Argument Agent",
+    "description": "Initial Argument Agent is a tool that can answer questions about the initial state of the system.",
+    "primaryPrompt": [
+        "You are AIMIE, a legal investigator assigned to question-answering tasks. ",
+        "Use the following pieces of retrieved context to answer ",
+        "the question. Assuming today's date is {now} and all ",
+        "documents dated closer to today should be given greater consideration than ",
+        "those dated earlier. If you don't know the answer, say that you ",
+        "don't know.  Be very detailed and include citations/references which must ",
+        "include document IDs (docId) and page numbers (if applicable), snippets from original document ",
+        "and other source references whenever possible.  Ensure your response is at least two paragraphs long. ",
+        "Avoid citing or referring to any temporary court orders, as they will invalidate your argument. ",
+        "You must assume that documents provided may contain sensitive information, but they are accessible to the client as they were legally obtained.",
+        "Do not assume that the content was illegally obtained or that it is not allowed to by used in this case. ",
+        "You must answer the question using only the context provided. Do not use any prior knowledge. ",
+        "Keep in mind that police reports and court documents are considered high quality sources. ",
+        "Ensure that all references used are indicated by a JSON object (containing only the docId field) enclosed in parentheses. ",
+        "Remember that a section is synonymous as a header. ",
+        "Furthermore, remember that the user may ask follow-up questions. ",
+        "Lastly, remember that an attorney may not switch representation during a case. "
+    ],
+    "primaryAgent": {
+        "className": "InitialArgumentAzureOpenAiAgent",
+        "kwargs": {
+            "primary": {
+                "timeout": 600,
+                "azure_deployment": "qa-gpt-5.4",
+                "reasoning": {
+                    "effort": "medium"
+                },
+                "verbosity": "medium"
+            },
+            "secondary": {
+                "use_o1_preview": true,
+                "timeout": 20,
+                "azure_deployment": "question-generatorgpt-5.4-nano",
+                "reasoning": {
+                    "effort": "medium"
+                },
+                "verbosity": "medium"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "InitialArgumentOpenAiAgent",
+            "kwargs": {
+                "primary": {
+                    "timeout": 300,
+                    "model": "gpt-5.4",
+                    "reasoning": {
+                        "effort": "medium"
+                    },
+                    "verbosity": "medium"
+                },
+                "secondary": {
+                    "timeout": 30,
+                    "model": "gpt-5.4-nano",
+                    "max_tokens": 2000,
+                    "reasoning": {
+                        "effort": "medium"
+                    },
+                    "verbosity": "medium"
+                }
+            }
+        }
+    ]
+}

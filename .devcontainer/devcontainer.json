@@ -1,0 +1,26 @@
+{
+    "name": "AIMIE Service",
+
+    "image": "mcr.microsoft.com/devcontainers/python:3.2.2-3.14-trixie",
+
+    "features": {
+        "ghcr.io/devcontainers/features/node:2": {},
+        "ghcr.io/devcontainers/features/azure-cli:1": {},
+        "ghcr.io/devcontainers/features/dotnet:2": {
+            "version": "6.0",
+            "additionalVersions": "7.0, 8.0"
+        },
+        "ghcr.io/devcontainers/features/github-cli": {}
+    },
+
+    "initializeCommand": "docker network inspect my_shared_network > /dev/null || docker network create my_shared_network --attachable",
+
+    "runArgs": [
+        "--network=my_shared_network",
+        "--hostname=aimie-service",
+        "--env-file",
+        "${localWorkspaceFolder}/.devcontainer/.env"
+    ],
+
+    "postCreateCommand": "sudo apt update && sudo apt install gnupg && npm i -g azure-functions-core-tools"
+}

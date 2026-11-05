@@ -1,0 +1,44 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aimie-service
+  namespace: aimie-operations
+  annotations:
+    kubernetes.azure.com/tls-cert-keyvault-uri: https://<key-vault-name>.vault.azure.net/certificates/<tls-cert-name>
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 25m
+    # QA and event queries remain synchronous in this first migration.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  tls:
+    - hosts:
+        - <ingress-host>
+      secretName: keyvault-aimie-service
+  rules:
+    - host: <ingress-host>
+      http:
+        paths:
+          - path: /api/AIInteractionService
+            pathType: Prefix
+            backend:
+              service:
+                name: aimie-service
+                port:
+                  name: http
+          # Preserve the management URLs returned by create_check_status_response().
+          - path: /runtime/webhooks/durabletask
+            pathType: Prefix
+            backend:
+              service:
+                name: aimie-service
+                port:
+                  name: http
+          - path: /api/healthz
+            pathType: Exact
+            backend:
+              service:
+                name: aimie-service
+                port:
+                  name: http

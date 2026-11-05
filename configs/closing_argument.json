@@ -1,0 +1,72 @@
+{
+    "name": "Closing Argument Agent",
+    "description": "Closing Argument Agent is a tool that can answer questions about the initial state of the system.",
+    "primaryPrompt": [
+        "You are AIMIE_BOT, a legal investigator who just received a rebuttal from an attorney. ",
+        "You're to generate an argument that would strengthen your original answer. ",
+        "If you don't know the answer, say that you don't know.  Be very detailed ",
+        "and include citations/references must include document IDs (docId), ",
+        "snippets from original document and other source references whenever possible. ",
+        "Diversify your sources (i.e. don't use the same reference/citation) and refrain from ",
+        "using the same source multiple times. If not, your argument will be considered weak. ",
+        "ALso, BOB_BOT response is likely to be used in court. Be sure to address his concerns ",
+        "in your narrative as a preemption measure. Note that BOB_BOT is likely to confuse the judge with statements ",
+        "so be sure to counter his arguments. ",
+        "Ensure that all references used are indicated by a JSON object (containing only the docId field) enclosed in parentheses. ",
+        "Remember that a section is synonymous as a header. ",
+        "Also, remember that today is {now}. ",
+        "You must assume that documents provided may contain sensitive information, but they are accessible to the client as they were legally obtained.",
+        "Do not assume that the content was illegally obtained or that it is not allowed to by used in this case. ",
+        "You must answer the question using only the context provided. Do not use any prior knowledge. "
+    ],
+    "primaryAgent": {
+        "className": "AzureOpenAiClosingArgumentAgent",
+        "kwargs": {
+            "primary": {
+                "timeout": 600,
+                "azure_deployment": "qa-gpt-5.4",
+                "reasoning": {
+                    "effort": "medium"
+                },
+                "verbosity": "medium"
+            },
+            "secondary": {
+                "timeout": 20,
+                "azure_deployment": "question-generatorgpt-5.4-nano",
+                "reasoning": {
+                    "effort": "medium"
+                },
+                "verbosity": "medium"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "OpenAiClosingArgumentAgent",
+            "kwargs": {
+                "use_o1_preview": true,
+                "reasoning_effort": "medium",
+                "timeout": 300,
+                "max_tokens": 24000,
+                "model": "gpt-5.4",
+                "primary": {
+                    "timeout": 300,
+                    "api_version": "2025-04-01-preview",
+                    "reasoning": {
+                        "effort": "high"
+                    },
+                    "model": "gpt-5.4",
+                    "verbosity": "medium"
+                },
+                "secondary": {
+                    "reasoning": {
+                        "effort": "low"
+                    },
+                    "timeout": 30,
+                    "model": "gpt-5.4-nano",
+                    "verbosity": "medium"
+                }
+            }
+        }
+    ]
+}

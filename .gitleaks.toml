@@ -1,0 +1,7 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Exact synthetic account key for the disposable local Azurite smoke test"
+regexTarget = "secret"
+regexes = ['''^Eby8vdM02xNOcqFeqCnf2LJ8bP2vK6r6BvP/0gTBDbE=$''']

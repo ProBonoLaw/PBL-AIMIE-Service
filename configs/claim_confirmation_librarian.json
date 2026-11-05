@@ -1,0 +1,73 @@
+{
+    "name": "Claim Confirmation Librarian",
+    "description": "An agent that validates claims and assertions made in statements against provided context documents, using multiple AI models for robust verification.",
+    "primaryPrompt": [
+        "You are a librarian who has been tasked with finding documents that substantiates the user claim.  Be sure to return a list of docIds of all applicable documents. If no documents are found, return an empty list."
+    ],
+    "primaryAgent": {
+        "className": "AzureOpenAiLibrarianClaimAgent",
+        "kwargs": {
+            "primary": {
+                "use_o1_preview": true,
+                "timeout": 90,
+                "azure_deployment": "qa-full-5.1",
+                "reasoning": {
+                    "effort": "medium"
+                },
+                "verbosity": "low"
+            },
+            "secondary": {
+                "timeout": 20,
+                "azure_deployment": "gpt-5-nano-qa",
+                "reasoning": {
+                    "effort": "minimal"
+                },
+                "verbosity": "low"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "OpenAiLibrarianClaimAgent",
+            "kwargs": {
+                "primary": {
+                    "reasoning": {
+                        "effort": "low"
+                    },
+                    "timeout": 90,
+                    "n": 1,
+                    "model": "gpt-5.1",
+                    "verbosity": "low"
+                },
+                "secondary": {
+                    "model": "gpt-5-nano",
+                    "reasoning": {
+                        "effort": "low"
+                    },
+                    "timeout": 30
+                }
+            }
+        },
+        {
+            "className": "AnthropicLibrarianClaimAgent",
+            "kwargs": {
+                "primary": {
+                    "model_name": "claude-haiku-4-5",
+                    "timeout": 120,
+                    "max_tokens_to_sample": 8000,
+                    "thinking": {
+                        "budget_tokens": 4096,
+                        "type": "enabled"
+                    }
+                },
+                "secondary": {
+                    "model_name": "claude-haiku-4-5",
+                    "max_tokens_to_sample": 8000,
+                    "timeout": 60,
+                    "temperature": 1.0,
+                    "top_p": 1.0
+                }
+            }
+        }
+    ]
+}

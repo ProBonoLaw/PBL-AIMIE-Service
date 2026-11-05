@@ -1,0 +1,111 @@
+{
+    "name": "QA Initial Agent",
+    "description": "QAInitial is a tool that can answer questions about the initial state of the system.",
+    "primaryPrompt": [
+        "You are an AI legal research service assistant. Respond professionally, courteously, and in complete sentences with proper punctuation.",
+        "Answer questions using only the provided context. Do not rely on prior knowledge. If the answer is unknown, say so.",
+        "Remember to center your answers towards the user you advocate for.",
+        "Assume today's date is {now}. Give greater weight to documents dated closer to today.",
+        "Be detailed and specific in your answers.  If the context provides multiple relevant pieces of information, include them all in your response.",
+        "Handle sensitive topics carefully and objectively. If the content does not support the user's position, explain this professionally using neutral language such as 'alleged', 'reportedly', or 'according to the document'.",
+        "Do not state limitations such as 'I cannot advocate', and do not reference document uploads or say 'based on the documents provided'.",
+        "You are to advocate for the client to be best of your abilities.",
+        "When answering, include citations using document IDs only, formatted as (\"docId\": \"<docId>\"). Each citation must be a JSON object containing only the docId field.",
+        "Use only docId values from the provided context. Assume all documents may contain sensitive but legally obtained information.",
+        "If the context contains conflicting information, advise the user to contact customer support and provide appropriate contact details.",
+        "If the question is unclear, ask for clarification. If it is unrelated to the context, respond exactly: 'Sorry, I can't help you with that.'",
+        "Do not mention internal assistant names in responses. If asked whether you are a person, reply: 'I am an AI assistant designed to help you with your questions.'",
+        "Assume follow-up questions may be asked."
+    ],
+    "primaryAgent": {
+        "className": "AzureOpenAiQaAgent",
+        "kwargs": {
+            "primary": {
+                "timeout": 300,
+                "azure_deployment": "gpt-5.6-luna",
+                "reasoning": {
+                    "effort": "high"
+                },
+                "verbosity": "medium"
+            },
+            "secondary": {
+                "timeout": 20,
+                "azure_deployment": "fact-finder-5.1",
+                "reasoning": {
+                    "effort": "low"
+                },
+                "verbosity": "low"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "OpenAiQaAgent",
+            "kwargs": {
+                "primary": {
+                    "timeout": 300,
+                    "model": "gpt-5.4",
+                    "reasoning": {
+                        "effort": "high"
+                    },
+                    "verbosity": "high"
+                },
+                "secondary": {
+                    "timeout": 60,
+                    "model": "gpt-5-nano",
+                    "reasoning": {
+                        "effort": "low"
+                    }
+                }
+            }
+        },
+        {
+            "className": "AnthropicQaAgent",
+            "kwargs": {
+                "primary": {
+                    "model_name": "claude-sonnet-4-5",
+                    "max_tokens_to_sample": 32000,
+                    "timeout": 120,
+                    "thinking": {
+                        "budget_tokens": 16000,
+                        "type": "enabled"
+                    }
+                },
+                "secondary": {
+                    "model_name": "claude-haiku-4-5",
+                    "max_tokens_to_sample": 8000,
+                    "timeout": 60
+                }
+            }
+        },
+        {
+            "className": "AimieQaGoogleAgent",
+            "kwargs": {
+                "model": "gemini-2.5-flash-lite",
+                "max_output_tokens": 64000,
+                "timeout": 120,
+                "temperature": 1,
+                "top_p": 1.0,
+                "n": 3,
+                "thinking_budget": 8000,
+                "primary": {
+                    "model": "gemini-2.5-flash-pro",
+                    "max_output_tokens": 12000,
+                    "timeout": 30,
+                    "temperature": 1,
+                    "top_p": 1.0,
+                    "n": 1,
+                    "thinking_budget": 1000
+                },
+                "secondary": {
+                    "model": "gemini-2.5-flash-lite",
+                    "max_output_tokens": 8000,
+                    "timeout": 120,
+                    "temperature": 1,
+                    "top_p": 1.0,
+                    "n": 1
+                }
+            }
+        }
+    ]
+}

@@ -1,0 +1,73 @@
+{
+    "name": "QA Cross Examination Agent",
+    "description": "QA Cross Examination is a tool that can answer questions about the initial state of the system.",
+    "primaryPrompt": [
+        "You are a BOB_BOT, a seedy attorney assigned to generate arguments to refute the response to the last question asked. ",
+        "Your primary goal is to disrupt AIMIE_BOT's investigation and confuse the judge with statements that would weaken her answer.",
+        "Remeber to center your answers towards the user you advocate for.",
+        "Assume today's date is {now}. Give greater weight to documents dated closer to today.",
+        "If you don't know the answer, say something that might confuse the judge. ",
+        "Do whatever is necessary to refute AIMIE_BOT's response. ",
+        "Be very detailed and include citations/references that must include document IDs (docId), as omitting any references would diminish the effectiveness of the argument. ",
+        "Ensure that all references used are indicated by a JSON object (containing only the docId field) enclosed in parentheses. ",
+        "Remember that a section is synonymous with a header. Furthermore, remember that the user may ask follow-up questions. ",
+        "You are to advocate for the client to be best of your abilities.",
+        "When answering, include citations using document IDs only, formatted as (\"docId\": \"<docId>\"). Each citation must be a JSON object containing only the docId field.",
+        "Use only docId values from the provided context. Assume all documents may contain sensitive but legally obtained information.",
+        "If the context contains conflicting information, advise the user to contact customer support and provide appropriate contact details.",
+        "If the question is unclear, ask for clarification. If it is unrelated to the context, respond exactly: 'Sorry, I can't help you with that.'",
+        "Do not mention internal assistant names in responses. If asked whether you are a person, reply: 'I am an AI assistant designed to help you with your questions.'",
+        "Assume follow-up questions may be asked."
+    ],
+    "primaryAgent": {
+        "className": "AzureOpenAiCrossExaminationAgent",
+        "kwargs": {
+            "primary": {
+                "use_o1_preview": true,
+                "timeout": 300,
+                "azure_deployment": "qa-gpt-5.4",
+                "model": "gpt-5.4",
+                "reasoning_effort": "high",
+                "max_tokens": 128000,
+                "api_version": "2025-04-01-preview",
+                "n": 1,
+                "verbosity": "high"
+            },
+            "secondary": {
+                "use_o1_preview": true,
+                "timeout": 20,
+                "azure_deployment": "fact-finder-5.1",
+                "model": "gpt-5.1",
+                "reasoning_effort": "low",
+                "max_tokens": 1000,
+                "api_version": "2025-04-01-preview",
+                "n": 1,
+                "verbosity": "low"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "OpenAiCrossExaminationAgent",
+            "kwargs": {
+                "primary": {
+                    "use_o1_preview": true,
+                    "reasoning_effort": "medium",
+                    "timeout": 20,
+                    "model": "gpt-5.2",
+                    "max_tokens": 40000,
+                    "n": 1,
+                    "verbosity": "high"
+                },
+                "secondary": {
+                    "use_o1_preview": true,
+                    "reasoning_effort": "low",
+                    "timeout": 60,
+                    "model": "gpt-5-nano",
+                    "max_tokens": 5000,
+                    "n": 1
+                }
+            }
+        }
+    ]
+}

@@ -1,0 +1,123 @@
+{
+    "name": "QA Initial Agent",
+    "description": "QAInitial is a tool that can answer questions about the initial state of the system.",
+    "primaryPrompt": [
+        "Your name is AIMIE, a talented customer service agent with expertise in answering questions about the system. ", 
+        "Be concise and to the point in your answers; keeping your responses short.  Please do not response in sentence fragments and always end with proper punctuation. ", 
+        "Assuming today's date is {now} and all documents dated closer to today should be given greater consideration than those dated earlier. If you don't know the answer, say that you don't know.  Be courteous. ", 
+        "When answering questions, you must provide citations/references which must include document IDs (docId), snippets from original document and other source references whenever possible.  All cited references are not to be counted towards the 100 word limit. ", 
+        "When citing references, use the following format: (\"docId\": \"<docId>\").  For example, if the document ID is \"12345\", you would write (\"docId\": \"12345\"). ", 
+        "Ensure that all references used are indicated by a JSON object (containing only the docId field) enclosed in parentheses. ", 
+        "Remember that a section is synonymous as a header. ", 
+        "Do not assume that the user uploaded any documents, so do not refer to them as such. ", 
+        "Furthermore, remember that the user may ask follow-up questions.", 
+        "Also, do not make any references to \"AIMIE\" or \"AIMIE_BOT\" names in your response. ", 
+        "Do not make any statements stating \"Based on the documents provided\" or similar, as it is implied. ", 
+        "Do not proclaim yourself in any way as a legal advocate.  Just answer the question to the best of your ability. ", 
+        "If you have any doubts about the question, ask for clarification. ", 
+        "If you the context has conflicting information, urge them to contact customer support and provide them the appropriate contact information. ", 
+        "If the question is not relevant to the context, respond with \"Sorry, I can't help you with that.\". ", 
+        "If you are asked if you are a person, respond with \"I am AIMIE, an AI assistant designed to help you with your questions.\" ", 
+        "When citing references, use the `docId` field from the context provided. Nothing else should be included in the citation. ",
+        "Today's date is {now}."
+    ],
+    "primaryAgent": {
+        "className": "AzureOpenAiQaAgent",
+        "kwargs": {
+            "primary": {
+                "use_o1_preview": true,
+                "timeout": 300,
+                "azure_deployment": "qa-gpt-5.2",
+                "model": "gpt-5.2",
+                "reasoning_effort": "medium",
+                "max_tokens": 128000,
+                "api_version": "2025-04-01-preview",
+                "n": 1,
+                "verbosity": "high"
+            },
+            "secondary": {
+                "use_o1_preview": true,
+                "timeout": 20,
+                "azure_deployment": "fact-finder-5.1",
+                "model": "gpt-5.1",
+                "reasoning_effort": "low",
+                "max_tokens": 1000,
+                "api_version": "2025-04-01-preview",
+                "n": 1,
+                "verbosity": "low"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "OpenAiQaAgent",
+            "kwargs": {
+                "primary": {
+                    "use_o1_preview": true,
+                    "reasoning_effort": "medium",
+                    "timeout": 20,
+                    "model": "gpt-5.2",
+                    "max_tokens": 40000,
+                    "n": 1,
+                    "verbosity": "high"
+                },
+                "secondary": {
+                    "use_o1_preview": true,
+                    "reasoning_effort": "low",
+                    "timeout": 60,
+                    "model": "gpt-5-nano",
+                    "max_tokens": 5000,
+                    "n": 1
+                }
+            }
+        },
+        {
+            "className": "AnthropicQaAgent",
+            "kwargs": {
+                "primary": {
+                    "model_name": "claude-sonnet-4-5",
+                    "max_tokens_to_sample": 32000,
+                    "timeout": 120,
+                    "thinking": {
+                        "budget_tokens": 16000,
+                        "type": "enabled"
+                    }
+                },
+                "secondary": {
+                    "model_name": "claude-haiku-4-5",
+                    "max_tokens_to_sample": 8000,
+                    "timeout": 60
+                }
+            }
+        },
+        {
+            "className": "AimieQaGoogleAgent",
+            "kwargs": {
+                "model": "gemini-2.5-flash-lite",
+                "max_output_tokens": 64000,
+                "timeout": 120,
+                "temperature": 1,
+                "top_p": 1.0,
+                "n": 3,
+                "thinking_budget": 8000,
+                "primary": {
+                    "model": "gemini-2.5-flash-pro",
+                    "max_output_tokens": 12000,
+                    "timeout": 30,
+                    "temperature": 1,
+                    "top_p": 1.0,
+                    "n": 1,
+                    "thinking_budget": 1000
+                },
+                "secondary": {
+                    "model": "gemini-2.5-flash-lite",
+                    "max_output_tokens": 8000,
+                    "timeout": 120,
+                    "temperature": 1,
+                    "top_p": 1.0,
+                    "n": 1
+                }
+            }
+        }
+    ]
+}

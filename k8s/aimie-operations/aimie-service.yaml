@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aimie-service
+  namespace: aimie-operations
+spec:
+  # Begin with one worker host; scale after measuring LLM quotas and Cosmos throughput.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: aimie-service
+  template:
+    metadata:
+      labels:
+        app: aimie-service
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: aimie-service
+      terminationGracePeriodSeconds: 180
+      volumes:
+        - name: appsettings
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: aimie-service-appsettings
+      containers:
+        - name: functions
+          image: <acr-login-server>/aimie-service:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: appsettings
+              mountPath: /mnt/keyvault
+              readOnly: true
+          env:
+            - name: APPSETTINGS_FILE
+              value: /mnt/keyvault/appsettings.json
+            - name: AzureFunctionsWebHost__hostid
+              value: aimie-service-aks-test
+            # Durable needs a host name to initialize its webhook URL provider
+            # outside App Service. The SDK rewrites returned links for each caller.
+            - name: WEBSITE_HOSTNAME
+              value: aimie-service.aimie-operations.svc.cluster.local
+            - name: AzureWebJobsSecretStorageType
+              value: blob
+            - name: AzureFunctionsJobHost__extensions__durableTask__hubName
+              value: AimieServiceAksTest
+            - name: AzureFunctionsJobHost__extensions__durableTask__httpSettings__useForwardedHost
+              value: "true"
+            - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+              value: "true"
+          startupProbe:
+            httpGet:
+              path: /api/healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /api/healthz
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # External provider failures must not cause host restart loops.
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              # Test nodes have only small unreserved CPU slices. The host still
+              # has a 2-core limit for bursts; revisit after measuring load.
+              cpu: 25m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aimie-service
+  namespace: aimie-operations
+spec:
+  type: ClusterIP
+  selector:
+    app: aimie-service
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

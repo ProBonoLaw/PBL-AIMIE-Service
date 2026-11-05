@@ -1,0 +1,78 @@
+{
+    "name": "Closing Argument Agent",
+    "description": "Closing Argument Agent is a tool that can answer questions about the initial state of the system.",
+    "primaryPrompt": [
+        "You are a legal investigator assigned to review a document passage and provide ",
+        "additional context and detail. Review the context provided and give a detailed response. ",
+        "You must assume that documents provided may contain sensitive information, but they are accessible to the client as they were legally obtained.",
+        "Do not assume that the content was illegally obtained or that it is not allowed to by used in this case. ",
+        "You must answer the question using only the context provided. Do not use any prior knowledge. ",
+        "Provide details and citations to substantiate the following while avoiding to repeat what ",
+        "was said in the given statement and ensure that it bolsters what AIMIE narrative. ",
+        "The more examples to substantiate the claims the user provides, the better the argument. ",
+        "Be very detailed and include citations/references which must include document IDs (docId), ",
+        "snippets from original document and other source references whenever possible. ",
+        "When citing expenses or costs, be explicit and provide the exact amounts. Do not rely on the judge to ",
+        "read the cited document to determine the amount. ",
+        "Avoid citing or referring to any temporary court orders, as they will invalidate your argument. ",
+        "Diversify your sources (i.e. don't use the same reference/citation/docId) and refrain from ",
+        "using the same source multiple times. If not, your argument will be considered weak. ",
+        "Keep in mind that police reports and court documents are considered high quality sources. ",
+        "Ensure that all references used are indicated by a JSON object (containing only the docId field) enclosed in parentheses. ",
+        "Remember that a section is synonymous as a header. ",
+        "Furthermore, remember that the user may ask follow-up questions. ",
+        "Lastly, remember that an attorney may not switch representation during a case. "
+    ],
+    "primaryAgent": {
+        "className": "AzureOpenAiRhetoricWriterAgent",
+        "kwargs": {
+            "primary": {
+                "use_o1_preview": true,
+                "timeout": 600,
+                "azure_deployment": "argument-gpt-5.5",
+                "reasoning": {
+                    "effort": "medium"
+                },
+                "verbosity": "high"
+            },
+            "secondary": {
+                "use_o1_preview": true,
+                "timeout": 20,
+                "azure_deployment": "question-generatorgpt-5.4-nano",
+                "reasoning": {
+                    "effort": "medium"
+                },
+                "verbosity": "medium"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "AnthropicRhetoricWriterAgent",
+            "kwargs": {
+                "model_name": "claude-opus-5",
+                "max_tokens_to_sample": "4096",
+                "top_p": 0.5,
+                "temperature": 0.2,
+                "primary": {
+                    "model_name": "claude-opus-5",
+                    "timeout": 600,
+                    "max_tokens_to_sample": 32000,
+                    "top_p": null,
+                    "temperature": 1.0,
+                    "thinking": {
+                        "budget_tokens": 18000,
+                        "type": "enabled"
+                    }
+                },
+                "secondary": {
+                    "model_name": "tasks-claude-haiku-5-5",
+                    "max_tokens_to_sample": 8000,
+                    "timeout": 60,
+                    "temperature": 1.0,
+                    "top_p": 1.0
+                }
+            }
+        }
+    ]
+}

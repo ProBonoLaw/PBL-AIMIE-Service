@@ -1,0 +1,60 @@
+{
+    "name": "Web Investigator Agent",
+    "description": "Web Investigator Agent is designed to gather information from the web, analyze it, and provide insights based on the collected data. It can handle complex queries and provide detailed responses.",
+    "primaryAgent": {
+        "className": "AzureOpenAiWebInvestigatorAgent",
+        "kwargs": {
+            "use_o1_preview": true,
+            "timeout": 240,
+            "azure_deployment": "o1-decision",
+            "model": "o1",
+            "max_tokens": 50000,
+            "reasoning_effort": "high",
+            "primary": {
+                    "use_o1_preview": false,
+                    "timeout": 600,
+                    "azure_deployment": "gpt-4.1",
+                    "api_version": "2024-12-01-preview",
+                    "max_tokens": 32768,
+                    "top_p": 0.5,
+                    "temperature": 0.5,
+                    "n": 1
+                },
+                "secondary": {
+                    "use_o1_preview": true,
+                    "timeout": 30,
+                    "model": "o3-mini",
+                    "azure_deployment": "o3-qa",
+                    "max_tokens": 2000,
+                    "reasoning_effort": "low"
+                }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "OpenAiWebInvestigatorAgent",
+            "kwargs": {
+                "use_o1_preview": true,
+                "reasoning_effort": "high",
+                "timeout": 300,
+                "max_tokens": 24000,
+                "model": "o1",
+                "primary": {
+                    "use_o1_preview": true,
+                    "reasoning_effort": "high",
+                    "timeout": 300,
+                    "max_tokens": 24000,
+                    "model": "o1"
+                }
+            },
+            "secondary": {
+                "use_o1_preview": true,
+                "reasoning_effort": "low",
+                "timeout": 30,
+                "azure_deployment": "o3-qa",
+                "model": "o3-mini",
+                "max_tokens": 2000
+            }
+        }
+    ]
+}

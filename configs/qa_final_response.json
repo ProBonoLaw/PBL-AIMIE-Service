@@ -1,0 +1,66 @@
+{
+    "name": "QA Final Response Agent",
+    "description": "QAInitial is a tool that can answer questions about the initial state of the system.",
+    "primaryAgent": {
+        "className": "AzureOpenAiFinalResponseAgent",
+        "kwargs": {
+            "primary": {
+                "timeout": 300,
+                "azure_deployment": "qa-gpt-5.2",
+                "reasoning": {
+                    "effort": "medium"
+                },
+                "verbosity": "high"
+            },
+            "secondary": {
+                "timeout": 20,
+                "azure_deployment": "fact-finder-5.1",
+                "reasoning": {
+                    "effort": "low"
+                },
+                "verbosity": "low"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "OpenAiFinalResponseAgent",
+            "kwargs": {
+                "primary": {
+                    "reasoning": {
+                        "effort": "low"
+                    },
+                    "timeout": 20,
+                    "model": "gpt-5.2",
+                    "verbosity": "high"
+                },
+                "secondary": {
+                    "reasoning": {
+                        "effort": "low"
+                    },
+                    "timeout": 60,
+                    "model": "gpt-5-nano"
+                }
+            }
+        },
+        {
+            "className": "AnthropicFinalResponseAgent",
+            "kwargs": {
+                "primary": {
+                    "model_name": "claude-sonnet-4-5",
+                    "max_tokens_to_sample": 32000,
+                    "timeout": 120,
+                    "thinking": {
+                        "budget_tokens": 16000,
+                        "type": "enabled"
+                    }
+                },
+                "secondary": {
+                    "model_name": "claude-haiku-4-5",
+                    "max_tokens_to_sample": 8000,
+                    "timeout": 60
+                }
+            }
+        }
+    ]
+}

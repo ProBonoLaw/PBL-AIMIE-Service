@@ -1,0 +1,42 @@
+{
+  "version": "2.0",
+  "extensions": {
+    "durableTask": {
+      "maxConcurrentActivityFunctions": 20,
+      "maxConcurrentOrchestratorFunctions": 10,
+      "storageProvider": {
+        "partitionCount": 16,
+        "controlQueueBatchSize": 16,
+        "maxQueuePollingInterval": "00:00:05.000"
+      },
+      "tracing": {
+        "distributedTracingEnabled": true,
+        "distributedTracingProtocol": "W3CTraceContext",
+        "version": "v2"
+      }
+    }
+  },
+  "logging": {
+    "logLevel": {
+      "Host.Results": "Information",
+      "Function": "Information",
+      "Function.status": "Information",
+      "Host.Aggregator": "Information"
+    },
+    "applicationInsights": {
+      "enableDependencyTracking": true,
+      "enableLiveMetrics": true,
+      "enablePerformanceCountersCollection": true,
+      "httpAutoCollectionOptions": {
+        "enableHttpTriggerExtendedInfoCollection": true,
+        "enableW3CDistributedTracing": true,
+        "enableResponseHeaderInjection": true
+      }
+    }
+  },
+  "extensionBundle": {
+    "id": "Microsoft.Azure.Functions.ExtensionBundle",
+    "version": "[4.*, 5.0.0)"
+  },
+  "functionTimeout": "04:00:00"
+}

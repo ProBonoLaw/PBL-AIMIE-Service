@@ -1,0 +1,25 @@
+name: Publication checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Check source identifiers
+        run: python scripts/check-publication.py
+      - name: Scan candidate tree for secrets
+        # Scan the tree; legacy private history is deliberately not being published.
+        run: |
+          docker run --rm -v "$PWD:/source:ro" zricethezav/gitleaks:v8.30.1 dir /source --redact --config /source/.gitleaks.toml

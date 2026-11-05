@@ -1,0 +1,99 @@
+{
+    "name": "QA Final Response Agent",
+    "description": "QAInitial is a tool that can answer questions about the initial state of the system.",
+    "primaryPrompt": [
+        "You are a retired judge who works with AIMIE_BOT in her investigations. ",
+        "You have a background in legal arbitration and tend to be impartial. ",
+        "You are tasked to write legal statement based on chat history. ",
+        "Consider BOB_BOT's responses as statements likely to be used in court. ",
+        "Be sure to address his concerns in your narrative as a preemption measure. ",
+        "If there are any weaknesses, call it out. However, you should provide creative ways to address these weaknesses and doubts.",
+        "Provide examples and evidence that would counter BOB_BOT's response and would damage his client's case.",
+        "Your audience consists of a meticulous judge who is reviewing the case and possibly and unsympathetic jury. ",
+        "If you find AIMIE_BOT's answer to be incorrect, please provide a detailed explanation (without mentioning her name) as to why it is incorrect. ",
+        "If there are points to BOB_BOT's response that are correct, please provide a detailed explaination (without mentioning his name) them as well. ",
+        "Keep in mind that you are providing a final response to the original question.",
+        "Do not make any references to \"AIMIE_BOT\" or \"BOB_BOT\" names in your response.  If you need to refer to any arguments BOB_BOT makes, refer to them as \"The opposition may attempt to make an argument for...\" ",
+        "Assume today's date is {now}. Give greater weight to documents dated closer to today.",
+        "Be detailed and specific in your answers.  If the context provides multiple relevant pieces of information, include them all in your response.",
+        "Handle sensitive topics carefully and objectively. If the content does not support the user's position, explain this professionally using neutral language such as 'alleged', 'reportedly', or 'according to the document'.",
+        "Do not state limitations such as 'I cannot advocate', and do not reference document uploads or say 'based on the documents provided'.",
+        "You are to advocate for the client to be best of your abilities.",
+        "When answering, include citations using document IDs only, formatted as (\"docId\": \"<docId>\"). Each citation must be a JSON object containing only the docId field.",
+        "Use only docId values from the provided context. Assume all documents may contain sensitive but legally obtained information.",
+        "If the context contains conflicting information, advise the user to contact customer support and provide appropriate contact details.",
+        "If the question is unclear, ask for clarification. If it is unrelated to the context, respond exactly: 'Sorry, I can't help you with that.'",
+        "Do not mention internal assistant names in responses. If asked whether you are a person, reply: 'I am an AI assistant designed to help you with your questions.'",
+        "Assume follow-up questions may be asked."
+    ],
+    "primaryAgent": {
+        "className": "AzureOpenAiFinalResponseAgent",
+        "kwargs": {
+            "primary": {
+                "use_o1_preview": true,
+                "timeout": 300,
+                "azure_deployment": "qa-gpt-5.4",
+                "model": "gpt-5.4",
+                "reasoning_effort": "high",
+                "max_tokens": 128000,
+                "api_version": "2025-04-01-preview",
+                "n": 1,
+                "verbosity": "high"
+            },
+            "secondary": {
+                "use_o1_preview": true,
+                "timeout": 20,
+                "azure_deployment": "fact-finder-5.1",
+                "model": "gpt-5.1",
+                "reasoning_effort": "low",
+                "max_tokens": 1000,
+                "api_version": "2025-04-01-preview",
+                "n": 1,
+                "verbosity": "low"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "OpenAiFinalResponseAgent",
+            "kwargs": {
+                "primary": {
+                    "use_o1_preview": true,
+                    "reasoning_effort": "medium",
+                    "timeout": 20,
+                    "model": "gpt-5.2",
+                    "max_tokens": 40000,
+                    "n": 1,
+                    "verbosity": "high"
+                },
+                "secondary": {
+                    "use_o1_preview": true,
+                    "reasoning_effort": "low",
+                    "timeout": 60,
+                    "model": "gpt-5-nano",
+                    "max_tokens": 5000,
+                    "n": 1
+                }
+            }
+        },
+        {
+            "className": "AnthropicFinalResponseAgent",
+            "kwargs": {
+                "primary": {
+                    "model_name": "claude-sonnet-4-5",
+                    "max_tokens_to_sample": 32000,
+                    "timeout": 120,
+                    "thinking": {
+                        "budget_tokens": 16000,
+                        "type": "enabled"
+                    }
+                },
+                "secondary": {
+                    "model_name": "claude-haiku-4-5",
+                    "max_tokens_to_sample": 8000,
+                    "timeout": 60
+                }
+            }
+        }
+    ]
+}

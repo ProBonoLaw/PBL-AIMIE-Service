@@ -1,0 +1,63 @@
+name: Deploy AKS Test
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Existing ACR tag sha-<40-character main commit SHA>
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event.repository.private == true && vars.ENABLE_PRIVATE_DEPLOYMENTS == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: aks-test
+    env:
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TEST_AZURE_SUBSCRIPTION_ID: ${{ vars.TEST_AZURE_SUBSCRIPTION_ID }}
+      TEST_STORAGE_ACCOUNT: ${{ vars.TEST_STORAGE_ACCOUNT }}
+      TEST_ACR_LOGIN_SERVER: ${{ vars.TEST_ACR_LOGIN_SERVER }}
+      TEST_KEYVAULT_NAME: ${{ vars.TEST_KEYVAULT_NAME }}
+      TEST_TLS_CERT_NAME: ${{ vars.TEST_TLS_CERT_NAME }}
+      TEST_INGRESS_HOST: ${{ vars.TEST_INGRESS_HOST }}
+    timeout-minutes: 40
+    concurrency:
+      group: aimie-service-aks-test
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Test subscription configuration
+        run: |
+          set -euo pipefail
+          : "${TEST_AZURE_SUBSCRIPTION_ID:?Set TEST_AZURE_SUBSCRIPTION_ID}"
+          [[ "$AZURE_SUBSCRIPTION_ID" == "$TEST_AZURE_SUBSCRIPTION_ID" ]] || { echo 'Test subscription mismatch' >&2; exit 1; }
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AKS_DEPLOY_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Publish Test agent configurations
+        env:
+          AKS_CLUSTER_RESOURCE_GROUP: ${{ vars.AKS_CLUSTER_RESOURCE_GROUP }}
+          AKS_CLUSTER_NAME: ${{ vars.AKS_CLUSTER_NAME }}
+        run: python3 scripts/publish-agent-configs.py --environment test --via-aks
+      - name: Deploy AIMIE container to AKS Test
+        env:
+          AKS_CLUSTER_RESOURCE_GROUP: ${{ vars.AKS_CLUSTER_RESOURCE_GROUP }}
+          AKS_CLUSTER_NAME: ${{ vars.AKS_CLUSTER_NAME }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_WORKLOAD_IDENTITY_CLIENT_ID: ${{ vars.AZURE_WORKLOAD_IDENTITY_CLIENT_ID }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: bash scripts/deploy-aks-test.sh

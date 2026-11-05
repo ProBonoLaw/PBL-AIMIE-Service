@@ -1,0 +1,22 @@
+# Explicit allowlist: local settings, credentials, Azurite state and venvs never enter the context.
+**
+!Dockerfile
+!requirements.txt
+!host.json
+!function_app.py
+!search_api.py
+!AIInteractionService/
+!AIInteractionService/**
+!activities/
+!activities/**
+!orchestrators/
+!orchestrators/**
+!utils/
+!utils/**
+!configs/
+!configs/**
+!deploy/
+!deploy/start_functions.py
+**/__pycache__/
+**/*.pyc
+**/.env*

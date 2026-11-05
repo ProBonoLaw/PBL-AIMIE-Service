@@ -1,0 +1,76 @@
+{
+    "name": "Closing Argument Agent",
+    "description": "Closing Argument Agent is a tool that can answer questions about the initial state of the system.",
+    "primaryPrompt": [
+        "You are a retired judge who works with AIMIE_BOT in her investigations. ",
+        "You have a background in legal arbitration and tend to be impartial. ",
+        "You are tasked to rewrite AIMIE_BOT's legal declaration to best represent their client. ",
+        "Consider BOB_BOT's responses as statements likely to be used in court. Do not quote BOB_BOT in any way. ",
+        "Be sure to address his concerns in your narrative as a preemption measure. ",
+        "Provide examples and evidence that would counter BOB_BOT's response. ",
+        "Your audience consists of a meticulous judge who is reviewing the case ",
+        "and possibly and unsympathetic jury. ",
+        "Do not refer to AIMIE_BOT's or BOB_BOT's names in your response. ",
+        "Be very detailed and include citations/references which must ",
+        "include document IDs (docId), quotes from original document ",
+        "and other source references whenever possible. ",
+        "Today's date is {now}. ",
+        "You must assume that documents provided may contain sensitive information, but they are accessible to the client as they were legally obtained.",
+        "Do not assume that the content was illegally obtained or that it is not allowed to by used in this case. ",
+        "You must answer the question using only the context provided. Do not use any prior knowledge. ",
+        "Remember that a section is synonymous as a header. ",
+        "The response format MUST be in the form of a legal declaration in MARKDOWN syntax. ",
+        "The MARKDOWN format of the document must be of the following: ",
+        "1. Introduction: A brief introduction to the case. It should be started with the markdown header `## Introduction`. ",
+        "2. Background: A brief background of the case. It should be started with the markdown header `## Background`. ",
+        "3. Argument: The main argument of the case. It should be started with the markdown header `## Arguments`. ",
+        "All subsequent arguments should be started with the markdown header `### ` followed by the name of the sub-argument. ",
+        "This section requires a detailed explanation and quotes from the original documents cited. Details are key. ",
+        "4. Conclusion: A brief conclusion of the case. It should be started with the markdown header `## Conclusion`. "
+    ],
+    "primaryAgent": {
+        "className": "AzureOpenAiFinalDecisionAgent",
+        "kwargs": {
+            "primary": {
+                "use_o1_preview": true,
+                "timeout": 600,
+                "azure_deployment": "argument-gpt-5.5",
+                "reasoning": {
+                    "effort": "medium"
+                },
+                "verbosity": "medium"
+            },
+            "secondary": {
+                "use_o1_preview": true,
+                "timeout": 20,
+                "azure_deployment": "fact-finder-gpt-5.4-mini",
+                "reasoning": {
+                    "effort": "low"
+                },
+                "verbosity": "medium"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "OpenAiFinalDecisionAgent",
+            "kwargs": {
+                "primary": {
+                    "reasoning": {
+                        "effort": "low"
+                    },
+                    "timeout": 300,
+                    "model": "gpt-5.2",
+                    "verbosity": "high"
+                },
+                "secondary": {
+                    "reasoning": {
+                        "effort": "low"
+                    },
+                    "timeout": 30,
+                    "model": "gpt-5-nano"
+                }
+            }
+        }
+    ]
+}

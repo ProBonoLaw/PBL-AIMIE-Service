@@ -1,0 +1,25 @@
+name: Validate private source configuration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.event.repository.private == true && vars.ENABLE_PRIVATE_INTEGRATION_TESTS == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: private-integration
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - run: python -m pip install -r requirements.txt
+      - name: Validate serialization without accessing or logging the document
+        env:
+          SHAREPOINT_EXAMPLE_DOCUMENT_URL: ${{ vars.SHAREPOINT_EXAMPLE_DOCUMENT_URL }}
+        run: |
+          : "${SHAREPOINT_EXAMPLE_DOCUMENT_URL:?Set SHAREPOINT_EXAMPLE_DOCUMENT_URL}"
+          python test.py

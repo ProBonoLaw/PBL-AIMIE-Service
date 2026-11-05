@@ -1,0 +1,114 @@
+name: Promote and deploy AKS Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Tested Test ACR image tag (latest or sha-<40-character main commit SHA>)
+        required: true
+        default: latest
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event.repository.private == true && vars.ENABLE_PRIVATE_DEPLOYMENTS == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: aks-production
+    env:
+      PROD_AZURE_SUBSCRIPTION_ID: ${{ vars.PROD_AZURE_SUBSCRIPTION_ID }}
+      TEST_AZURE_SUBSCRIPTION_ID: ${{ vars.TEST_AZURE_SUBSCRIPTION_ID }}
+      PROD_STORAGE_ACCOUNT: ${{ vars.PROD_STORAGE_ACCOUNT }}
+      TEST_ACR_NAME: ${{ vars.TEST_ACR_NAME }}
+      TEST_ACR_LOGIN_SERVER: ${{ vars.TEST_ACR_LOGIN_SERVER }}
+      TEST_KEYVAULT_NAME: ${{ vars.TEST_KEYVAULT_NAME }}
+    timeout-minutes: 60
+    concurrency:
+      group: aimie-service-aks-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check production configuration and image tag
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_WORKLOAD_IDENTITY_CLIENT_ID: ${{ vars.AZURE_WORKLOAD_IDENTITY_CLIENT_ID }}
+          PROD_ACR_NAME: ${{ vars.PROD_ACR_NAME }}
+          PROD_KEYVAULT_NAME: ${{ vars.PROD_KEYVAULT_NAME }}
+          PROD_TLS_CERT_NAME: ${{ vars.PROD_TLS_CERT_NAME }}
+          PROD_INGRESS_HOST: ${{ vars.PROD_INGRESS_HOST }}
+          PROD_AKS_RESOURCE_GROUP: ${{ vars.PROD_AKS_RESOURCE_GROUP }}
+          PROD_AKS_CLUSTER_NAME: ${{ vars.PROD_AKS_CLUSTER_NAME }}
+        run: |
+          set -euo pipefail
+          for name in AZURE_SUBSCRIPTION_ID AZURE_TENANT_ID AZURE_CLIENT_ID \
+            AZURE_WORKLOAD_IDENTITY_CLIENT_ID PROD_ACR_NAME PROD_KEYVAULT_NAME \
+            PROD_TLS_CERT_NAME PROD_INGRESS_HOST PROD_AKS_RESOURCE_GROUP PROD_AKS_CLUSTER_NAME \
+            PROD_AZURE_SUBSCRIPTION_ID TEST_AZURE_SUBSCRIPTION_ID PROD_STORAGE_ACCOUNT TEST_ACR_NAME TEST_ACR_LOGIN_SERVER TEST_KEYVAULT_NAME; do
+            [[ -n "${!name}" ]] || { echo "Missing aks-production variable: $name" >&2; exit 1; }
+          done
+          [[ "$IMAGE_TAG" == latest || "$IMAGE_TAG" =~ ^sha-[[:xdigit:]]{40}$ ]] || { echo 'Invalid image tag' >&2; exit 1; }
+          [[ "$AZURE_SUBSCRIPTION_ID" == "$PROD_AZURE_SUBSCRIPTION_ID" && "$PROD_AZURE_SUBSCRIPTION_ID" != "$TEST_AZURE_SUBSCRIPTION_ID" ]] || {
+            echo 'Production subscription mismatch or overlap with Test' >&2; exit 1;
+          }
+          [[ "$PROD_ACR_NAME" != "$TEST_ACR_NAME" && "$PROD_KEYVAULT_NAME" != "$TEST_KEYVAULT_NAME" ]] || { echo 'Production registry and vault must be separate from Test' >&2; exit 1; }
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Resolve tested Test image
+        env:
+          REQUESTED_IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          metadata=$(az acr repository show-tags --name "$TEST_ACR_NAME" --repository aimie-service \
+            --detail --subscription "$TEST_AZURE_SUBSCRIPTION_ID" --output json)
+          resolution=$(python3 scripts/resolve_aks_production_image.py "$REQUESTED_IMAGE_TAG" <<< "$metadata")
+          read -r image_tag image_digest <<< "$resolution"
+          git cat-file -e "${image_tag#sha-}^{commit}" || { echo 'Image commit is not in this repository' >&2; exit 1; }
+          git merge-base --is-ancestor "${image_tag#sha-}" HEAD || {
+            echo 'Image commit is not on main' >&2; exit 1;
+          }
+          echo "Promoting $image_tag ($image_digest)"
+          echo "IMAGE_TAG=$image_tag" >> "$GITHUB_ENV"
+          echo "IMAGE_DIGEST=$image_digest" >> "$GITHUB_ENV"
+      - name: Promote the tested Test image to production ACR
+        env:
+          PROD_ACR_NAME: ${{ vars.PROD_ACR_NAME }}
+        run: |
+          set -euo pipefail
+          az acr login --name "$TEST_ACR_NAME" --subscription "$TEST_AZURE_SUBSCRIPTION_ID"
+          actual_server=$(az acr show --name "$TEST_ACR_NAME" --subscription "$TEST_AZURE_SUBSCRIPTION_ID" --query loginServer -o tsv)
+          [[ "$actual_server" == "$TEST_ACR_LOGIN_SERVER" ]] || { echo 'Test registry mismatch' >&2; exit 1; }
+          docker pull "$TEST_ACR_LOGIN_SERVER/aimie-service@$IMAGE_DIGEST"
+          az acr login --name "$PROD_ACR_NAME"
+          login_server=$(az acr show --name "$PROD_ACR_NAME" --query loginServer -o tsv)
+          docker tag "$TEST_ACR_LOGIN_SERVER/aimie-service@$IMAGE_DIGEST" "$login_server/aimie-service:$IMAGE_TAG"
+          docker push "$login_server/aimie-service:$IMAGE_TAG"
+          echo "PROD_ACR_LOGIN_SERVER=$login_server" >> "$GITHUB_ENV"
+      - name: Publish production agent configurations
+        env:
+          PROD_AKS_RESOURCE_GROUP: ${{ vars.PROD_AKS_RESOURCE_GROUP }}
+          PROD_AKS_CLUSTER_NAME: ${{ vars.PROD_AKS_CLUSTER_NAME }}
+        run: python3 scripts/publish-agent-configs.py --environment production --via-aks
+      - name: Deploy AIMIE Service to production AKS
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_WORKLOAD_IDENTITY_CLIENT_ID: ${{ vars.AZURE_WORKLOAD_IDENTITY_CLIENT_ID }}
+          PROD_KEYVAULT_NAME: ${{ vars.PROD_KEYVAULT_NAME }}
+          PROD_TLS_CERT_NAME: ${{ vars.PROD_TLS_CERT_NAME }}
+          PROD_INGRESS_HOST: ${{ vars.PROD_INGRESS_HOST }}
+          PROD_AKS_RESOURCE_GROUP: ${{ vars.PROD_AKS_RESOURCE_GROUP }}
+          PROD_AKS_CLUSTER_NAME: ${{ vars.PROD_AKS_CLUSTER_NAME }}
+        run: bash scripts/deploy-aks-production.sh

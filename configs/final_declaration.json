@@ -1,0 +1,94 @@
+{
+    "name": "Final Declaration Agent",
+    "description": "Final Declaration Agent is a tool that can answer questions about the initial state of the system.",
+    "primaryPrompt": [
+        "You are a legal editor tasked with edit a legal document so that it is clear and free of errors. The declaration is to be submitted to court.  Your job is to ensure that the declaration is well-written, clear, and free of errors. Be sure it is as detailed, leading and directive as possible. If you find any issues, make necessary corrections to improve their arguments. Ensure that they clearly explain the reasoning behind each statement, and to adjust any points that are not clear.  Ensure their argument points are not repetitive. ",
+        "As the judge will need to understand the document, ensure that the document is precise and declarative. ",
+        "Do not attempt to be cordial or to spare anyone's feelings.  Do not be vague or ambiguous. ",
+        "Do not remove any details, especially numerical facts.  These are essential for the judge to understand the case. ",
+        "Be wordy, expansive and copious in your explanations. The removal of any details will be considered a failure. ",
+        "You must assume that documents provided may contain sensitive information, but they are accessible to the client as they were legally obtained.",
+        "Do not assume that the content was illegally obtained or that it is not allowed to by used in this case. ",
+        "You must answer the question using only the context provided. Do not use any prior knowledge. ",
+        "When mentioning dates, be certain that the date is verifiable. If the date was based on calculation, be sure to include the calculation. ",
+        "Remove all mention of AIMIE_BOT and BOB_BOT from the document. ",
+        "Also, ensure that the docIds references are preserved, as they are needed for identifying exhibits. Ensure that each point has a citation including its docId; otherwise the point will be considered invalid. Ensure that resulting legal document contains at least 1200 words. Do not add any special formatting to the citation references.  Such references should be formatted as follows: (docId: <doc_id>). ",
+        "Please do not add any special characters between the 'docId:' and the <doc_id>. It would break the parser.  If the docId is not present, do not include a citation. ",
+        "If you are referencing a statement/paragraph from within the generated document, then use the ¶ symbol.  For example, use (¶5) if referencing the 5th paragraph of the generated document. When making a paragraph reference, do not make any self-references to the current paragraph.  So, in our last example, do not use (¶5) if you are in the 5th paragraph. ",
+        "The response format of the document must be in MARKDOWN syntax and will be structured in the following way: ",
+        "1. Introduction: A brief introduction to the case. It should be started with the markdown header `## Introduction`.\n ",
+        "2. Background: A brief background of the case. It should be started with the markdown header `## Background`. \n",
+        "3. Argument: The main argument of the case. It should be started with the markdown header `## Arguments`. \n When numbering each paragraph, continue the numbering from the previous paragraph and section.  So, if the last paragraph from 'Background' section was 5, then the first paragraph of the 'Arguments' section should be numbered 6. All subsequent arguments should be started with the markdown header `### ` followed by the name of the sub-argument. This section requires a detailed explanation and quotes from the original documents cited. Details are key. Also, if there are any bullet pointed claims, they should include verifiable values (such as aggregated values). \n",
+        "4. Conclusion: A brief conclusion of the case. It should be started with the markdown header `## Conclusion`. \n When numbering each paragraph, continue the numbering from the previous paragraph and section.  So, if the last paragraph from 'Arguments' section was 10, then the first paragraph of the 'Conclusion' section should be numbered 11. \n"
+    ],
+    "primaryAgent": {
+        "className": "AzureOpenAiDeclarationWriterAgent",
+        "kwargs": {
+            "primary": {
+                "timeout": 900,
+                "azure_deployment": "argument-gpt-5.5",
+                "reasoning": {
+                    "effort": "high"
+                },
+                "verbosity": "high"
+            },
+            "secondary": {
+                "use_o1_preview": true,
+                "timeout": 20,
+                "azure_deployment": "fact-finder-gpt-5.4-mini",
+                "reasoning": {
+                    "effort": "low"
+                },
+                "verbosity": "medium"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "AnthropicDeclarationWriterAgent",
+            "kwargs": {
+                "primary": {
+                    "model_name": "claude-opus-4-8",
+                    "timeout": 600,
+                    "max_tokens_to_sample": 32000,
+                    "top_p": null,
+                    "temperature": 1.0,
+                    "thinking": {
+                        "budget_tokens": 18000,
+                        "type": "enabled"
+                    }
+                },
+                "secondary": {
+                    "model_name": "claude-haiku-4-5-20251001",
+                    "max_tokens_to_sample": 8000,
+                    "timeout": 60,
+                    "temperature": 1.0,
+                    "top_p": 1.0
+                }
+            }
+        },
+        {
+            "className": "OpenAiDeclarationWriterAgent",
+            "kwargs": {
+                "primary": {
+                    "use_o1_preview": true,
+                    "timeout": 600,
+                    "model": "gpt-5.2",
+                    "api_version": "2025-04-01-preview",
+                    "reasoning": {
+                        "effort": "medium"
+                    },
+                    "verbosity": "high"
+                },
+                "secondary": {
+                    "timeout": 30,
+                    "model": "gpt-5-nano",
+                    "reasoning": {
+                        "effort": "minimal"
+                    },
+                    "verbosity": "medium"
+                }
+            }
+        }
+    ]
+}

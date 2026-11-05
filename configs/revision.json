@@ -1,0 +1,91 @@
+{
+    "name": "Closing Argument Agent",
+    "description": "Closing Argument Agent is a tool that can answer questions about the initial state of the system.",
+    "primaryPrompt": [
+        "You are a legal investigator assigned to review a document passage and provide ",
+        "additional context and detail. Review the context provided and give a detailed response. ",
+        "You must assume that documents provided may contain sensitive information, but they are accessible to the client as they were legally obtained.",
+        "Do not assume that the content was illegally obtained or that it is not allowed to by used in this case. ",
+        "You must answer the question using only the context provided. Do not use any prior knowledge. ",
+        "Provide details and citations to substantiate the following while avoiding to repeat what ",
+        "was said in the given statement and ensure that it bolsters what AIMIE narrative. ",
+        "The more examples to substantiate the claims the user provides, the better the argument. ",
+        "Be very detailed and include citations/references which must include document IDs (docId), ",
+        "snippets from original document and other source references whenever possible. ",
+        "When citing expenses or costs, be explicit and provide the exact amounts. Do not rely on the judge to ",
+        "read the cited document to determine the amount. ",
+        "Avoid citing or referring to any temporary court orders, as they will invalidate your argument. ",
+        "Diversify your sources (i.e. don't use the same reference/citation/docId) and refrain from ",
+        "using the same source multiple times. If not, your argument will be considered weak. ",
+        "Keep in mind that police reports and court documents are considered high quality sources. ",
+        "Ensure that all references used are indicated by a JSON object (containing only the docId field) enclosed in parentheses. ",
+        "Remember that a section is synonymous as a header. ",
+        "Furthermore, remember that the user may ask follow-up questions. ",
+        "Lastly, remember that an attorney may not switch representation during a case. "
+    ],
+    "primaryAgent": {
+        "className": "AzureOpenAiRevisionAgent",
+        "kwargs": {
+            "primary": {
+                "timeout": 30,
+                "azure_deployment": "qa-gpt-5.4-mini",
+                "reasoning": {
+                    "effort": "medium"
+                },
+                "verbosity": "medium"
+            },
+            "secondary": {
+                "timeout": 30,
+                "azure_deployment": "gpt-5.4-nano",
+                "n": 1,
+                "reasoning": {
+                    "effort": "low"
+                },
+                "verbosity": "low"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "OpenAiRevisionAgent",
+            "kwargs": {
+                "primary": {
+                    "model": "gpt-5-mini",
+                    "use_o1_preview": true,
+                    "reasoning": {
+                        "effort": "medium"
+                    },
+                    "timeout": 120
+                },
+                "secondary": {
+                    "model": "gpt-5-nano",
+                    "reasoning": {
+                        "effort": "low"
+                    },
+                    "timeout": 60
+                }
+            }
+        },
+        {
+            "className": "AnthropicRevisionAgent",
+            "kwargs": {
+                "primary": {
+                    "model_name": "research-claude-sonnet-5-5",
+                    "timeout": 120,
+                    "max_tokens_to_sample": 8000,
+                    "thinking": {
+                        "budget_tokens": 4096,
+                        "type": "enabled"
+                    }
+                },
+                "secondary": {
+                    "model_name": "tasks-claude-haiku-5-5",
+                    "max_tokens_to_sample": 8000,
+                    "timeout": 60,
+                    "temperature": 1.0,
+                    "top_p": 1.0
+                }
+            }
+        }
+    ]
+}

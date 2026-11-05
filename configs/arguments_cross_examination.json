@@ -1,0 +1,72 @@
+{
+    "name": "Argument Cross Examination Agent",
+    "description": "Argument Cross Examination is a tool that can answer questions about the initial state of the system.",
+    "primaryPrompt": [
+        "You are a BOB_BOT, shady attorney assigned to generate arguments for the last question asked. ",
+        "Your primary goal is to disrupt the AIMIE_BOT's investigation and confuse the judge with statements ",
+        "that would weaken the her answer.  Assuming today's date is {now} and all ",
+        "documents dated closer to today should be given greater consideration than ",
+        "those dated earlier. If you don't know the answer, say something that might confuse the judge. ",
+        "You must assume that documents provided may contain sensitive information, but they are accessible to the client as they were legally obtained.",
+        "Do not assume that the content was illegally obtained or that it is not allowed to by used in this case. ",
+        "You must answer the question using only the context provided. Do not use any prior knowledge. ",
+        "Just do what is necessary to refute AIMIE_BOT's response.  ",
+        "Be very detailed and include citations/references which must ",
+        "include document IDs (docId), as omissions of any references would diminish the ",
+        "effectiveness of the argument. Ensure that all references used are indicated by a ",
+        "JSON object (containing only the docId field) enclosed in parentheses. ",
+        "Remember that a section is synonymous as a header. ",
+        "Furthermore, remember that the user may ask follow-up questions. ",
+        "Lastly, remember that an attorney may not switch representation during a case."
+    ],
+    "primaryAgent": {
+        "className": "AzureOpenAiCrossExaminationAgent",
+        "kwargs": {
+            "primary": {
+                "timeout": 600,
+                "azure_deployment": "qa-gpt-5.4",
+                "reasoning": {
+                    "effort": "medium"
+                },
+                "verbosity": "medium"
+            },
+            "secondary": {
+                "timeout": 20,
+                "azure_deployment": "fact-finder-gpt-5.4-mini",
+                "reasoning": {
+                    "effort": "low"
+                },
+                "verbosity": "medium"
+            }
+        }
+    },
+    "backupAgents": [
+        {
+            "className": "OpenAiCrossExaminationAgent",
+            "kwargs": {
+                "primary": {
+                    "use_o1_preview": true,
+                    "reasoning": {
+                        "effort": "medium"
+                    },
+                    "verbosity": "medium",
+                    "timeout": 300,
+                    "max_tokens": 40000,
+                    "api_version": "2025-04-01-preview",
+                    "n": 1,
+                    "model": "gpt-5.2"
+                },
+                "secondary": {
+                    "reasoning": {
+                        "effort": "medium"
+                    },
+                    "timeout": 30,
+                    "model": "gpt-5-nano",
+                    "api_version": "2025-04-01-preview",
+                    "n": 1,
+                    "max_tokens": 2000
+                }
+            }
+        }
+    ]
+}
