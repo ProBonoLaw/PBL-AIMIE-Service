@@ -83,6 +83,43 @@ jobs:
     if: github.event.repository.private == true && vars.ENABLE_PRIVATE_DEPLOYMENTS == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: image
     runs-on: ubuntu-latest
+    environment: aks-production
+    env:
+      PROD_ACR_NAME: ${{ vars.PROD_ACR_NAME }}
+      PROD_ACR_LOGIN_SERVER: ${{ vars.PROD_ACR_LOGIN_SERVER }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: aimie-service-image
+          path: /tmp
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Validate registry configuration and log in
+        run: |
+          set -euo pipefail
+          : "${PROD_ACR_NAME:?Set PROD_ACR_NAME}"
+          : "${PROD_ACR_LOGIN_SERVER:?Set PROD_ACR_LOGIN_SERVER}"
+          actual_server=$(az acr show --name "$PROD_ACR_NAME" --query loginServer -o tsv)
+          [[ "$actual_server" == "$PROD_ACR_LOGIN_SERVER" ]] || { echo 'Production registry mismatch' >&2; exit 1; }
+          az acr login --name "$PROD_ACR_NAME"
+      - name: Publish the tested image
+        run: |
+          docker load --input /tmp/aimie-service-image.tar.gz
+          docker tag aimie-service:sha-${{ github.sha }} "$PROD_ACR_LOGIN_SERVER/aimie-service:sha-${{ github.sha }}"
+          docker push "$PROD_ACR_LOGIN_SERVER/aimie-service:sha-${{ github.sha }}"
+          docker tag aimie-service:sha-${{ github.sha }} "$PROD_ACR_LOGIN_SERVER/aimie-service:latest"
+          docker push "$PROD_ACR_LOGIN_SERVER/aimie-service:latest"
+
+  publish-test:
+    if: vars.TEST_ENVIRONMENT_ENABLED == 'true' && github.event.repository.private == true && vars.ENABLE_PRIVATE_DEPLOYMENTS == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: image
+    runs-on: ubuntu-latest
     environment: aks-test
     env:
       TEST_ACR_NAME: ${{ vars.TEST_ACR_NAME }}
@@ -117,8 +154,8 @@ jobs:
           docker push "$TEST_ACR_LOGIN_SERVER/aimie-service:latest"
 
   deploy:
-    if: github.event.repository.private == true && vars.ENABLE_PRIVATE_DEPLOYMENTS == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: publish
+    if: ${{ vars.TEST_ENVIRONMENT_ENABLED == 'true' && (github.event.repository.private == true && vars.ENABLE_PRIVATE_DEPLOYMENTS == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main') }}
+    needs: publish-test
     permissions:
       contents: read
       id-token: write
